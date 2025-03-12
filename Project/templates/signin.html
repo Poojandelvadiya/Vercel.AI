@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In - AI Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        }
+        .floating {
+            animation: float 6s ease-in-out infinite;
+        }
+        @keyframes float {
+            0% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(5deg); }
+            100% { transform: translateY(0px) rotate(0deg); }
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glow {
+            filter: drop-shadow(0 0 12px rgba(59, 130, 246, 0.5));
+        }
+        @media (max-width: 640px) {
+            .glass-effect {
+                padding: 1.5rem;
+                margin: 1rem;
+            }
+            
+            .login-title {
+                font-size: 1.5rem;
+            }
+            
+            .input-field {
+                font-size: 0.875rem;
+            }
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen flex items-center justify-center p-4">
+    <!-- Login Card -->
+    <div class="glass-effect rounded-2xl p-4 sm:p-8 w-full max-w-md mx-4 relative z-10">
+        <!-- Logo and Title -->
+        <div class="text-center mb-8">
+            <svg class="w-20 h-20 mx-auto mb-4 text-blue-500" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="currentColor"/>
+                <path d="M12 6c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z" fill="currentColor"/>
+            </svg>
+            <h1 class="text-3xl font-bold text-blue-400">Welcome Back</h1>
+            <p class="text-gray-400 mt-2">Sign in to your account</p>
+        </div>
+
+        <!-- Login Form -->
+        <form method="POST" action="{{ url_for('login') }}" class="space-y-6">
+            <!-- Username Field -->
+            <div>
+                <label class="block text-gray-300 mb-2 text-sm font-medium">Username</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-blue-400">
+                        <i class="fas fa-user"></i>
+                    </span>
+                    <input type="text" name="username" required
+                           class="w-full pl-10 pr-4 py-3 bg-gray-800/50 border border-gray-700 rounded-lg 
+                                  text-white placeholder-gray-500 focus:outline-none focus:ring-2 
+                                  focus:ring-blue-500 focus:border-transparent"
+                           placeholder="Enter your username">
+                </div>
+            </div>
+
+            <!-- Password Field -->
+            <div>
+                <label class="block text-gray-300 mb-2 text-sm font-medium">Password</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-blue-400">
+                        <i class="fas fa-lock"></i>
+                    </span>
+                    <input type="password" name="password" required
+                           class="w-full pl-10 pr-4 py-3 bg-gray-800/50 border border-gray-700 rounded-lg 
+                                  text-white placeholder-gray-500 focus:outline-none focus:ring-2 
+                                  focus:ring-blue-500 focus:border-transparent"
+                           placeholder="Enter your password">
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" 
+                    class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium 
+                           rounded-lg transition duration-200 ease-in-out transform hover:scale-105
+                           hover:shadow-lg hover:shadow-blue-500/50">
+                Sign In
+            </button>
+        </form>
+
+        <!-- Register Link -->
+        <p class="mt-8 text-center text-gray-400">
+            Don't have an account? 
+            <a href="{{ url_for('register') }}" class="text-blue-400 hover:text-blue-300 font-medium">Create one</a>
+        </p>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="fixed top-4 right-4 z-50 {{ 'bg-green-500' if category == 'success' else 'bg-red-500' }} text-white px-6 py-3 rounded-lg shadow-lg">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+</body>
+</html> 
