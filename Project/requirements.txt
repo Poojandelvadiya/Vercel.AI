@@ -1,4 +1,2 @@
 Flask
 google-generativeai
-sqlite3
-
