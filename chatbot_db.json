@@ -1,0 +1,55 @@
+{
+  "users": [
+    {
+      "username": "admin",
+      "email": "admin@example.com",
+      "password": "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewFX.gtkn.PaPQO2",
+      "reset_token": null,
+      "created_at": "2024-01-01T00:00:00Z"
+    },
+    {
+      "username": "test",
+      "email": "test@example.com",
+      "password": "$2b$12$8NKxJWJD.a/w8.4c8TvCdu/P.JK1Dz.5Df9KNPPUQEiwlKqfFWGYe",
+      "reset_token": null,
+      "created_at": "2024-01-01T00:00:00Z"
+    },
+    {
+      "username": "user1",
+      "email": "user1@example.com",
+      "password": "$2b$12$B5uE2n0PRgz8N8C2x8LWs.XWRV8Ej.6Qz5gBwcEZJX9HnVKnq3vyq",
+      "reset_token": null,
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  ],
+  "login_history": [
+    {
+      "username": "admin",
+      "login_time": "2024-01-01T00:00:00Z"
+    },
+    {
+      "username": "test",
+      "login_time": "2024-01-01T00:00:00Z"
+    }
+  ],
+  "indexes": {
+    "users": [
+      {
+        "keys": { "username": 1 },
+        "unique": true
+      },
+      {
+        "keys": { "email": 1 },
+        "unique": true
+      }
+    ],
+    "login_history": [
+      {
+        "keys": { "username": 1 }
+      },
+      {
+        "keys": { "login_time": 1 }
+      }
+    ]
+  }
+} 

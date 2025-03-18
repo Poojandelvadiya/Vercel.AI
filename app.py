@@ -5,9 +5,14 @@ from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_mail import Mail, Message
 import secrets
-import mysql.connector
+from pymongo import MongoClient
 from datetime import datetime
 import time
+import json
+import urllib.parse
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # PIL imports
 from PIL import Image  # Basic image handling
@@ -34,123 +39,71 @@ app.config['MAIL_DEFAULT_SENDER'] = 'poojandelvadiya27@gmail.com'
 
 mail = Mail(app)
 
-# MySQL Configuration
-db_config = {
-    'host': 'localhost',
-    'user': 'root',
-    'password': '',
-    'database': 'chatbot_db'
-}
+# MongoDB Configuration
+MONGODB_USERNAME = urllib.parse.quote_plus("poojandelvadiya27")
+MONGODB_PASSWORD = urllib.parse.quote_plus("Poojan27@")
+MONGODB_CLUSTER = "cluster0.6dw8w"  # Updated cluster name
+MONGODB_URI = f"mongodb+srv://{MONGODB_USERNAME}:{MONGODB_PASSWORD}@{MONGODB_CLUSTER}.mongodb.net/chatbot_db?retryWrites=true&w=majority"
 
 def get_db_connection():
     try:
-        # Try to connect to MySQL
-        conn = mysql.connector.connect(**db_config)
-        
-        if not conn.is_connected():
-            print("Failed to connect to MySQL")
-            return None
-            
-        cursor = conn.cursor(dictionary=True)
-        
-        # Import the SQL file if database is empty
-        try:
-            cursor.execute("SHOW TABLES")
-            if not cursor.fetchall():  # If no tables exist
-                print("Database is empty. Importing from SQL file...")
-                with open('chatbot_db.sql', 'r') as sql_file:
-                    sql_script = sql_file.read()
-                    # Split and execute each statement
-                    for statement in sql_script.split(';'):
-                        if statement.strip():
-                            cursor.execute(statement)
-                    conn.commit()
-                    print("Database imported successfully!")
-        except Exception as e:
-            print(f"Error importing database: {e}")
-        
-        return conn
-        
-    except mysql.connector.Error as e:
-        error_msg = f"MySQL Connection Error: {e}"
-        if e.errno == 1045:  # Access denied error
-            error_msg = "Access denied for MySQL user. Check username and password."
-        elif e.errno == 2003:  # Can't connect to server
-            error_msg = "Cannot connect to MySQL server. Make sure it's running."
-        print(error_msg)
-        return None
-        
+        client = MongoClient(MONGODB_URI)
+        db = client.chatbot_db
+        # Test the connection
+        client.server_info()
+        print("Successfully connected to MongoDB!")
+        return db
     except Exception as e:
-        print(f"Unexpected error connecting to MySQL: {e}")
-        return None
+        print(f"MongoDB Connection Error: {str(e)}")
+        raise
 
-# Initialize database and tables
+# Initialize database and collections
 def init_db():
     try:
-        conn = get_db_connection()
-        if conn:
-            cursor = conn.cursor(dictionary=True)
-            
-            # Import SQL file if it exists
-            try:
-                with open('chatbot_db.sql', 'r') as sql_file:
-                    sql_script = sql_file.read()
-                    # Split and execute each statement
-                    for statement in sql_script.split(';'):
-                        if statement.strip():
-                            cursor.execute(statement)
-                    conn.commit()
-                    print("Database initialized from SQL file successfully!")
-            except FileNotFoundError:
-                print("chatbot_db.sql file not found. Creating default tables...")
-                # Create default tables if SQL file is not found
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS users (
-                        id INT AUTO_INCREMENT PRIMARY KEY,
-                        username VARCHAR(80) UNIQUE NOT NULL,
-                        email VARCHAR(120) UNIQUE NOT NULL,
-                        password VARCHAR(255) NOT NULL,
-                        reset_token VARCHAR(100)
-                    )
-                """)
-                conn.commit()
-                print("Default tables created successfully!")
-            
-            # Verify table structure
-            cursor.execute("SHOW TABLES")
-            tables = cursor.fetchall()
-            print("\nDatabase tables:")
-            for table in tables:
-                table_name = table[list(table.keys())[0]]
-                print(f"\nTable: {table_name}")
-                cursor.execute(f"DESCRIBE {table_name}")
-                columns = cursor.fetchall()
-                for column in columns:
-                    print(f"Column: {column['Field']}, Type: {column['Type']}")
-            
-            cursor.close()
-            conn.close()
-        else:
-            print("Failed to initialize database - could not connect!")
-    except mysql.connector.Error as e:
+        db = get_db_connection()
+        # Create collections if they don't exist
+        if 'users' not in db.list_collection_names():
+            db.create_collection('users')
+            print("Created users collection")
+        
+        if 'login_history' not in db.list_collection_names():
+            db.create_collection('login_history')
+            print("Created login_history collection")
+        
+        # Create indexes
+        db.users.create_index([("username", 1)], unique=True)
+        db.users.create_index([("email", 1)], unique=True)
+        db.login_history.create_index([("user_id", 1)])
+        db.login_history.create_index([("login_time", 1)])
+        
+        # Check if we need to insert sample users
+        if db.users.count_documents({}) == 0:
+            sample_users = [
+                {
+                    'username': 'admin',
+                    'email': 'admin@example.com',
+                    'password': generate_password_hash('admin123'),
+                    'created_at': datetime.utcnow()
+                },
+                {
+                    'username': 'test',
+                    'email': 'test@example.com',
+                    'password': generate_password_hash('test123'),
+                    'created_at': datetime.utcnow()
+                },
+                {
+                    'username': 'user1',
+                    'email': 'user1@example.com',
+                    'password': generate_password_hash('password123'),
+                    'created_at': datetime.utcnow()
+                }
+            ]
+            db.users.insert_many(sample_users)
+            print("Inserted sample users")
+        
+        print("Database initialized successfully!")
+    except Exception as e:
         print(f"Database initialization error: {e}")
-        if e.errno == 1049:  # Database doesn't exist
-            try:
-                # Try to create database
-                conn = mysql.connector.connect(
-                    host=db_config['host'],
-                    user=db_config['user'],
-                    password=db_config['password']
-                )
-                cursor = conn.cursor()
-                cursor.execute("CREATE DATABASE IF NOT EXISTS chatbot_db")
-                print("Created database chatbot_db")
-                cursor.close()
-                conn.close()
-                # Try initialization again
-                init_db()
-            except Exception as e2:
-                print(f"Failed to create database: {e2}")
 
 # Configure Gemini AI
 genai.configure(api_key="AIzaSyDlNE1t-0s005OZ2vc7jLN0Fl8iMJXxdO4")
@@ -185,112 +138,44 @@ def register():
         email = request.form.get('email')
         password = request.form.get('password')
         
-        print(f"Registration attempt - Username: {username}, Email: {email}")
-        
         if not username or not email or not password:
             flash('Please fill in all fields', 'error')
             return render_template('register.html')
         
-        conn = None
-        cursor = None
         try:
-            # Get database connection
-            conn = get_db_connection()
-            if not conn:
-                print("Failed to establish database connection")
-                flash('Database connection error. Please try again later.', 'error')
-                return render_template('register.html')
-            
-            cursor = conn.cursor(dictionary=True)
-            
-            # Verify database exists
-            try:
-                cursor.execute("USE chatbot_db")
-            except mysql.connector.Error as e:
-                print(f"Database selection error: {e}")
-                flash('Database configuration error. Please contact support.', 'error')
-                return render_template('register.html')
-            
-            # Verify users table exists
-            cursor.execute("SHOW TABLES LIKE 'users'")
-            if not cursor.fetchone():
-                print("Users table does not exist, creating it now...")
-                try:
-                    cursor.execute("""
-                        CREATE TABLE IF NOT EXISTS users (
-                            id INT AUTO_INCREMENT PRIMARY KEY,
-                            username VARCHAR(80) UNIQUE NOT NULL,
-                            email VARCHAR(120) UNIQUE NOT NULL,
-                            password VARCHAR(255) NOT NULL,
-                            reset_token VARCHAR(100)
-                        )
-                    """)
-                    conn.commit()
-                    print("Users table created successfully")
-                except mysql.connector.Error as e:
-                    print(f"Table creation error: {e}")
-                    flash('Error setting up database. Please contact support.', 'error')
-                    return render_template('register.html')
-            
+            db = get_db_connection()
             # Check if username exists
-            cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
-            if cursor.fetchone():
+            if db.users.find_one({'username': username}):
                 flash('Username already exists', 'error')
                 return render_template('register.html')
             
             # Check if email exists
-            cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
-            if cursor.fetchone():
+            if db.users.find_one({'email': email}):
                 flash('Email already registered', 'error')
                 return render_template('register.html')
             
-            try:
-                # Hash the password
-                hashed_password = generate_password_hash(password)
-                
-                # Insert new user
-                cursor.execute("""
-                    INSERT INTO users (username, email, password) 
-                    VALUES (%s, %s, %s)
-                """, (username, email, hashed_password))
-                
-                conn.commit()
-                print(f"User registered successfully: {username}")
-                
+            # Create new user
+            hashed_password = generate_password_hash(password)
+            new_user = {
+                'username': username,
+                'email': email,
+                'password': hashed_password,
+                'created_at': datetime.utcnow()
+            }
+            
+            result = db.users.insert_one(new_user)
+            
+            if result.inserted_id:
                 flash('Registration successful! Please sign in.', 'success')
                 return redirect(url_for('signin'))
-                
-            except mysql.connector.Error as e:
-                print(f"Error inserting new user: {e}")
-                if e.errno == 1062:  # Duplicate entry error
-                    flash('Username or email already exists', 'error')
-                else:
-                    flash('Error creating account. Please try again.', 'error')
+            else:
+                flash('Error creating account', 'error')
                 return render_template('register.html')
                 
-        except mysql.connector.Error as e:
-            print(f"MySQL Error during registration: {e}")
-            error_message = str(e)
-            if e.errno == 2003:
-                error_message = "Cannot connect to database server. Please check if MySQL is running."
-            elif e.errno == 1045:
-                error_message = "Database access denied. Please check credentials."
-            elif e.errno == 1049:
-                error_message = "Database does not exist."
-            flash(f'Database error: {error_message}', 'error')
-            return render_template('register.html')
-            
         except Exception as e:
-            print(f"Unexpected error during registration: {e}")
-            flash('An unexpected error occurred during registration', 'error')
+            print(f"Registration error: {e}")
+            flash('An error occurred during registration', 'error')
             return render_template('register.html')
-            
-        finally:
-            if cursor:
-                cursor.close()
-            if conn and conn.is_connected():
-                conn.close()
-                print("Database connection closed")
     
     return render_template('register.html')
 
@@ -305,57 +190,32 @@ def signin():
             return render_template('signin.html')
         
         try:
-            conn = get_db_connection()
-            if not conn:
-                flash('Database connection error', 'error')
-                return render_template('signin.html')
+            db = get_db_connection()
+            # Find user by username
+            user = db.users.find_one({'username': username})
+            
+            if user and check_password_hash(user['password'], password):
+                # Record login history
+                db.login_history.insert_one({
+                    'user_id': user['_id'],
+                    'username': user['username'],
+                    'login_time': datetime.utcnow()
+                })
                 
-            cursor = conn.cursor(dictionary=True)
-            
-            # Debug: Print the username being searched
-            print(f"Attempting login for username: {username}")
-            
-            # Get user details including password hash
-            cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
-            user = cursor.fetchone()
-            
-            # Debug: Print if user was found
-            print(f"User found in database: {user is not None}")
-            
-            if user:
-                # Debug: Print password verification attempt
-                print(f"Verifying password for user: {user['username']}")
-                try:
-                    if check_password_hash(user['password'], password):
-                        print("Password verified successfully")
-                        session['user_id'] = user['id']
-                        session['username'] = user['username']
-                        return redirect(url_for('index'))
-                    else:
-                        print("Password verification failed")
-                        flash('Invalid username or password', 'error')
-                except Exception as e:
-                    print(f"Password verification error: {str(e)}")
-                    flash('Error verifying password', 'error')
+                session['user_id'] = str(user['_id'])
+                session['username'] = user['username']
+                flash('Login successful!', 'success')
+                return redirect(url_for('index'))
             else:
                 flash('Invalid username or password', 'error')
-            
-            return render_template('signin.html')
+                return render_template('signin.html')
                 
-        except mysql.connector.Error as e:
-            print(f"Database error during signin: {e}")
-            flash('An error occurred during login. Please try again.', 'error')
+        except Exception as e:
+            print(f"Signin error: {e}")
+            flash('An error occurred during login', 'error')
             return render_template('signin.html')
-        finally:
-            if 'cursor' in locals():
-                cursor.close()
-            if 'conn' in locals() and conn:
-                conn.close()
-            
+    
     return render_template('signin.html')
-
-# Store reset tokens temporarily (in production, use a database)
-reset_tokens = {}
 
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
@@ -367,43 +227,33 @@ def forgot_password():
             return render_template('forgot_password.html')
         
         try:
-            # Connect to MySQL database
-            conn = get_db_connection()
-            if not conn:
-                flash('Database connection error. Please try again later.', 'error')
+            db = get_db_connection()
+            if not db:
+                flash('Database connection error', 'error')
                 return render_template('forgot_password.html')
-                
-            cursor = conn.cursor(dictionary=True)
             
-            # Debug: Print email being searched
-            print(f"Searching for email: {email}")
-            
-            # Check if email exists
-            cursor.execute("SELECT id, email, username FROM users WHERE email = %s", (email,))
-            user = cursor.fetchone()
-            
-            # Debug: Print user found or not
-            print(f"User found: {user is not None}")
+            # Find user by email
+            user = db.users.find_one({'email': email})
             
             if user:
+                # Generate reset token
+                token = secrets.token_urlsafe(32)
+                
+                # Update user with reset token
+                db.users.update_one(
+                    {'_id': user['_id']},
+                    {'$set': {'reset_token': token}}
+                )
+                
+                # Create reset link
+                reset_link = url_for('reset_password', token=token, _external=True)
+                
                 try:
-                    # Generate reset token
-                    token = secrets.token_urlsafe(32)
-                    
-                    # Store token in database
-                    cursor.execute("UPDATE users SET reset_token = %s WHERE id = %s", 
-                                 (token, user['id']))
-                    conn.commit()
-                    
-                    # Create reset link
-                    reset_link = url_for('reset_password', token=token, _external=True)
-                    
-                    try:
-                        # Send email
-                        msg = Message('Password Reset Request',
-                                    sender=app.config['MAIL_DEFAULT_SENDER'],
-                                    recipients=[email])
-                        msg.body = f'''Hi {user['username']},
+                    # Send email
+                    msg = Message('Password Reset Request',
+                                sender=app.config['MAIL_DEFAULT_SENDER'],
+                                recipients=[email])
+                    msg.body = f'''Hi {user['username']},
 
 You have requested to reset your password. Please click on the following link to reset your password:
 
@@ -413,46 +263,36 @@ If you did not make this request, please ignore this email and no changes will b
 
 Best regards,
 Your AI Chatbot Team'''
-                        
-                        mail.send(msg)
-                        
-                        flash('Password reset instructions have been sent to your email.', 'success')
-                        return redirect(url_for('signin'))
                     
-                    except Exception as e:
-                        print(f"Email sending error: {e}")
-                        flash('Error sending email. Please check your email configuration.', 'error')
-                        return render_template('forgot_password.html')
-                
+                    mail.send(msg)
+                    flash('Password reset instructions have been sent to your email.', 'success')
+                    return redirect(url_for('signin'))
+                    
                 except Exception as e:
-                    print(f"Token generation/storage error: {e}")
-                    flash('Error generating reset token. Please try again.', 'error')
+                    print(f"Email sending error: {e}")
+                    flash('Error sending email. Please try again later.', 'error')
                     return render_template('forgot_password.html')
             else:
                 flash('No account found with that email address.', 'error')
                 return render_template('forgot_password.html')
-        
-        except mysql.connector.Error as e:
-            print(f"Database error: {e}")
-            flash('Database error. Please try again later.', 'error')
+                
+        except Exception as e:
+            print(f"Forgot password error: {e}")
+            flash('An error occurred. Please try again later.', 'error')
             return render_template('forgot_password.html')
-        finally:
-            if 'cursor' in locals():
-                cursor.close()
-            if 'conn' in locals() and conn:
-                conn.close()
     
     return render_template('forgot_password.html')
 
 @app.route('/reset-password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
+        db = get_db_connection()
+        if not db:
+            flash('Database connection error', 'error')
+            return redirect(url_for('signin'))
         
-        # Check if token exists and is valid
-        cursor.execute("SELECT id, email FROM users WHERE reset_token = %s", (token,))
-        user = cursor.fetchone()
+        # Find user with reset token
+        user = db.users.find_one({'reset_token': token})
         
         if not user:
             flash('Invalid or expired reset link.', 'error')
@@ -470,26 +310,25 @@ def reset_password(token):
                 flash('Passwords do not match.', 'error')
                 return render_template('reset_password.html')
             
-            # Hash the new password
-            hashed_password = generate_password_hash(password)
-            
             # Update password and remove token
-            cursor.execute("UPDATE users SET password = %s, reset_token = NULL WHERE id = %s",
-                         (hashed_password, user['id']))
-            conn.commit()
+            hashed_password = generate_password_hash(password)
+            db.users.update_one(
+                {'_id': user['_id']},
+                {
+                    '$set': {'password': hashed_password},
+                    '$unset': {'reset_token': ""}
+                }
+            )
             
             flash('Your password has been updated successfully.', 'success')
             return redirect(url_for('signin'))
         
         return render_template('reset_password.html')
         
-    except mysql.connector.Error as e:
+    except Exception as e:
+        print(f"Reset password error: {e}")
         flash('An error occurred. Please try again later.', 'error')
-        print(f"Database error: {e}")
         return redirect(url_for('signin'))
-    finally:
-        cursor.close()
-        conn.close()
 
 @app.route('/logout')
 def logout():
@@ -692,59 +531,52 @@ if __name__ == "__main__":
         
         try:
             # Connect to database to create test users
-            conn = get_db_connection()
-            if conn:
-                cursor = conn.cursor(dictionary=True)
-                
-                # Create test users only if they don't exist
-                test_users = [
-                    {
-                        'username': 'test1',
-                        'email': 'test1@example.com',
-                        'password': 'test123'
-                    },
-                    {
-                        'username': 'test2',
-                        'email': 'test2@example.com',
-                        'password': 'test123'
-                    }
-                ]
-                
-                for user_data in test_users:
-                    try:
-                        # Check if user already exists
-                        cursor.execute("SELECT id FROM users WHERE email = %s OR username = %s", 
-                                     (user_data['email'], user_data['username']))
-                        existing_user = cursor.fetchone()
+            db = get_db_connection()
+            cursor = db.users.find()
+            
+            # Create test users only if they don't exist
+            test_users = [
+                {
+                    'username': 'test1',
+                    'email': 'test1@example.com',
+                    'password': 'test123'
+                },
+                {
+                    'username': 'test2',
+                    'email': 'test2@example.com',
+                    'password': 'test123'
+                }
+            ]
+            
+            for user_data in test_users:
+                try:
+                    # Check if user already exists
+                    existing_user = db.users.find_one({'username': user_data['username']})
+                    
+                    if not existing_user:
+                        # Hash the password
+                        hashed_password = generate_password_hash(user_data['password'])
                         
-                        if not existing_user:
-                            # Hash the password
-                            hashed_password = generate_password_hash(user_data['password'])
-                            
-                            # Insert new user
-                            cursor.execute("""
-                                INSERT INTO users (username, email, password) 
-                                VALUES (%s, %s, %s)
-                            """, (user_data['username'], user_data['email'], hashed_password))
-                            
-                            conn.commit()
-                            print(f"Created test user: {user_data['username']}")
-                        else:
-                            print(f"Test user {user_data['username']} already exists")
-                            
-                    except Exception as e:
-                        print(f"Error creating test user {user_data['username']}: {str(e)}")
-                
-                # Verify test users exist
-                cursor.execute("SELECT username, email FROM users")
-                existing_users = cursor.fetchall()
-                print("\nExisting users in database:")
-                for user in existing_users:
-                    print(f"Username: {user['username']}, Email: {user['email']}")
-                
-                cursor.close()
-                conn.close()
-                
+                        # Insert new user
+                        db.users.insert_one({
+                            'username': user_data['username'],
+                            'email': user_data['email'],
+                            'password': hashed_password
+                        })
+                        
+                        print(f"Created test user: {user_data['username']}")
+                    else:
+                        print(f"Test user {user_data['username']} already exists")
+                        
+                except Exception as e:
+                    print(f"Error creating test user {user_data['username']}: {str(e)}")
+            
+            # Verify test users exist
+            existing_users = db.users.find()
+            print("\nExisting users in database:")
+            for user in existing_users:
+                print(f"Username: {user['username']}, Email: {user['email']}")
+            
         except Exception as e:
             print(f"Error setting up test users: {str(e)}")
         
