@@ -14,20 +14,13 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
+import requests
+import base64
+from PIL import Image
+from io import BytesIO
 
 # Load environment variables
 load_dotenv()
-
-# PIL imports
-from PIL import Image  # Basic image handling
-from PIL import ImageDraw  # For drawing on images
-from PIL import ImageFont  # For adding text to images
-from PIL import ImageFilter  # For image filters
-from PIL import ImageEnhance  # For image enhancement
-
-import requests
-from io import BytesIO
-import base64
 
 app = Flask(__name__, static_folder='static', static_url_path='/static')
 app.config['SECRET_KEY'] = secrets.token_hex(16)
@@ -38,7 +31,7 @@ app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USE_SSL'] = False
 app.config['MAIL_USERNAME'] = 'poojandelvadiya27@gmail.com'
-app.config['MAIL_PASSWORD'] = 'hxgu iwah ppfm ofhj'
+app.config['MAIL_PASSWORD'] = 'wdvb bpqy jujm rbgj'
 app.config['MAIL_DEFAULT_SENDER'] = 'poojandelvadiya27@gmail.com'
 
 mail = Mail(app)
@@ -77,6 +70,10 @@ def get_db_connection():
 def init_db():
     try:
         db = get_db_connection()
+        if not db:
+            print("Failed to connect to MongoDB in init_db")
+            return
+        
         # Create collections if they don't exist
         if 'users' not in db.list_collection_names():
             db.create_collection('users')
@@ -515,7 +512,11 @@ def generate_image():
                 # Download the image
                 image_response = requests.get(image_url)
                 if image_response.status_code == 200:
-                    image_base64 = base64.b64encode(image_response.content).decode('utf-8')
+                    # Convert image to base64
+                    image = Image.open(BytesIO(image_response.content))
+                    buffered = BytesIO()
+                    image.save(buffered, format="JPEG")
+                    image_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
                     return jsonify({
                         "image": image_base64,
                         "prompt": prompt
