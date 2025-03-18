@@ -53,13 +53,16 @@ def get_db_connection():
             connection_string,
             ssl=True,
             tlsAllowInvalidCertificates=True,
-            serverSelectionTimeoutMS=5000,
-            connectTimeoutMS=5000,
-            socketTimeoutMS=5000
+            serverSelectionTimeoutMS=30000,  # Increased timeout
+            connectTimeoutMS=30000,
+            socketTimeoutMS=30000,
+            retryWrites=True,
+            w='majority'
         )
         
         # Test the connection
         client.server_info()
+        print("Successfully connected to MongoDB!")
         
         # Get database
         db = client.chatbot_db
@@ -152,50 +155,45 @@ def index():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        username = request.form.get('username')
-        email = request.form.get('email')
-        password = request.form.get('password')
-        
-        if not username or not email or not password:
-            flash('Please fill in all fields', 'error')
-            return render_template('register.html')
+        username = request.form['username']
+        email = request.form['email']
+        password = request.form['password']
         
         try:
             db = get_db_connection()
-            # Check if username exists
-            if db.users.find_one({'username': username}):
-                flash('Username already exists', 'error')
-                return render_template('register.html')
-            
-            # Check if email exists
-            if db.users.find_one({'email': email}):
-                flash('Email already registered', 'error')
-                return render_template('register.html')
-            
-            # Create new user
-            hashed_password = generate_password_hash(password)
-            new_user = {
-                'username': username,
-                'email': email,
-                'password': hashed_password,
-                'created_at': datetime.utcnow()
-            }
-            
-            result = db.users.insert_one(new_user)
-            
-            if result.inserted_id:
+            if db is not None:
+                # Check if username already exists
+                if db.users.find_one({'username': username}):
+                    flash('Username already exists!', 'error')
+                    return render_template('Register.html')
+                
+                # Check if email already exists
+                if db.users.find_one({'email': email}):
+                    flash('Email already registered!', 'error')
+                    return render_template('Register.html')
+                
+                # Hash password
+                hashed_password = generate_password_hash(password)
+                
+                # Insert new user
+                db.users.insert_one({
+                    'username': username,
+                    'email': email,
+                    'password': hashed_password
+                })
+                
                 flash('Registration successful! Please sign in.', 'success')
                 return redirect(url_for('signin'))
             else:
-                flash('Error creating account', 'error')
-                return render_template('register.html')
+                flash('Database connection error. Please try again later.', 'error')
+                return render_template('Register.html')
                 
         except Exception as e:
-            print(f"Registration error: {e}")
-            flash('An error occurred during registration', 'error')
-            return render_template('register.html')
+            print(f"Registration error: {str(e)}")
+            flash('An error occurred during registration. Please try again.', 'error')
+            return render_template('Register.html')
     
-    return render_template('register.html')
+    return render_template('Register.html')
 
 @app.route('/signin', methods=['GET', 'POST'])
 def signin():
