@@ -37,31 +37,34 @@ app.config['MAIL_DEFAULT_SENDER'] = 'poojandelvadiya27@gmail.com'
 mail = Mail(app)
 
 # MongoDB Configuration
-MONGODB_USERNAME = urllib.parse.quote_plus(os.getenv('MONGODB_USERNAME', 'poojandelvadiya27'))
-MONGODB_PASSWORD = urllib.parse.quote_plus(os.getenv('MONGODB_PASSWORD', 'Poojan27@'))
-MONGODB_CLUSTER = os.getenv('MONGODB_CLUSTER', 'cluster0.6dw8w')
-MONGODB_DATABASE = os.getenv('MONGODB_DATABASE', 'chatbot_db')
-
-MONGODB_URI = f"mongodb+srv://{MONGODB_USERNAME}:{MONGODB_PASSWORD}@{MONGODB_CLUSTER}.mongodb.net/{MONGODB_DATABASE}?retryWrites=true&w=majority"
+MONGODB_URI = "mongodb+srv://poojandelvadiya27:Poojan27@@cluster0.6dw8w.mongodb.net/chatbot_db?retryWrites=true&w=majority&tlsAllowInvalidCertificates=true"
 
 def get_db_connection():
     try:
+        # Parse username and password for URL encoding
+        username = urllib.parse.quote_plus("poojandelvadiya27")
+        password = urllib.parse.quote_plus("Poojan27@")
+        
+        # Construct connection string with encoded credentials
+        connection_string = f"mongodb+srv://{username}:{password}@cluster0.6dw8w.mongodb.net/chatbot_db?retryWrites=true&w=majority&tlsAllowInvalidCertificates=true"
+        
+        # Create MongoDB client with SSL configuration
         client = MongoClient(
-            MONGODB_URI,
-            serverSelectionTimeoutMS=30000,
-            connectTimeoutMS=30000,
-            socketTimeoutMS=30000,
+            connection_string,
             ssl=True,
             tlsAllowInvalidCertificates=True,
-            tlsAllowInvalidHostnames=True,
-            retryWrites=True,
-            w='majority'
+            serverSelectionTimeoutMS=5000,
+            connectTimeoutMS=5000,
+            socketTimeoutMS=5000
         )
-        db = client[MONGODB_DATABASE]
+        
         # Test the connection
         client.server_info()
-        print("Successfully connected to MongoDB!")
+        
+        # Get database
+        db = client.chatbot_db
         return db
+        
     except Exception as e:
         print(f"MongoDB Connection Error: {str(e)}")
         return None
