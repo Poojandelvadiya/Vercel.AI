@@ -42,12 +42,12 @@ mail = Mail(app)
 # MongoDB Configuration
 MONGODB_USERNAME = urllib.parse.quote_plus("poojandelvadiya27")
 MONGODB_PASSWORD = urllib.parse.quote_plus("Poojan27@")
-MONGODB_CLUSTER = "cluster0.6dw8w"  # Updated cluster name
-MONGODB_URI = f"mongodb+srv://{MONGODB_USERNAME}:{MONGODB_PASSWORD}@{MONGODB_CLUSTER}.mongodb.net/chatbot_db?retryWrites=true&w=majority"
+MONGODB_CLUSTER = "cluster0.6dw8w"
+MONGODB_URI = f"mongodb+srv://{MONGODB_USERNAME}:{MONGODB_PASSWORD}@{MONGODB_CLUSTER}.mongodb.net/chatbot_db?retryWrites=true&w=majority&connectTimeoutMS=5000&socketTimeoutMS=5000"
 
 def get_db_connection():
     try:
-        client = MongoClient(MONGODB_URI)
+        client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
         db = client.chatbot_db
         # Test the connection
         client.server_info()
@@ -55,7 +55,8 @@ def get_db_connection():
         return db
     except Exception as e:
         print(f"MongoDB Connection Error: {str(e)}")
-        raise
+        # Instead of raising, return None and handle it in the routes
+        return None
 
 # Initialize database and collections
 def init_db():
@@ -191,6 +192,10 @@ def signin():
         
         try:
             db = get_db_connection()
+            if not db:
+                flash('Database connection error. Please try again later.', 'error')
+                return render_template('signin.html')
+            
             # Find user by username
             user = db.users.find_one({'username': username})
             
@@ -212,7 +217,7 @@ def signin():
                 
         except Exception as e:
             print(f"Signin error: {e}")
-            flash('An error occurred during login', 'error')
+            flash('An error occurred during login. Please try again later.', 'error')
             return render_template('signin.html')
     
     return render_template('signin.html')
