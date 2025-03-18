@@ -43,11 +43,16 @@ mail = Mail(app)
 MONGODB_USERNAME = urllib.parse.quote_plus("poojandelvadiya27")
 MONGODB_PASSWORD = urllib.parse.quote_plus("Poojan27@")
 MONGODB_CLUSTER = "cluster0.6dw8w"
-MONGODB_URI = f"mongodb+srv://{MONGODB_USERNAME}:{MONGODB_PASSWORD}@{MONGODB_CLUSTER}.mongodb.net/chatbot_db?retryWrites=true&w=majority&connectTimeoutMS=5000&socketTimeoutMS=5000"
+MONGODB_URI = f"mongodb+srv://{MONGODB_USERNAME}:{MONGODB_PASSWORD}@{MONGODB_CLUSTER}.mongodb.net/chatbot_db?retryWrites=true&w=majority&tls=true&tlsAllowInvalidCertificates=true"
 
 def get_db_connection():
     try:
-        client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
+        client = MongoClient(
+            MONGODB_URI,
+            serverSelectionTimeoutMS=5000,
+            ssl=True,
+            tlsAllowInvalidCertificates=True
+        )
         db = client.chatbot_db
         # Test the connection
         client.server_info()
