@@ -18,6 +18,7 @@ import requests
 import base64
 from PIL import Image
 from io import BytesIO
+import ssl
 
 # Load environment variables
 load_dotenv()
@@ -45,19 +46,21 @@ def get_db_connection():
         username = urllib.parse.quote_plus("poojandelvadiya27")
         password = urllib.parse.quote_plus("Poojan27@")
         
-        # Construct connection string with encoded credentials
-        connection_string = f"mongodb+srv://{username}:{password}@cluster0.6dw8w.mongodb.net/chatbot_db?retryWrites=true&w=majority&tlsAllowInvalidCertificates=true"
+        # Construct connection string with encoded credentials and SSL parameters
+        connection_string = f"mongodb+srv://{username}:{password}@cluster0.6dw8w.mongodb.net/chatbot_db?retryWrites=true&w=majority&tlsAllowInvalidCertificates=true&tlsAllowInvalidHostnames=true"
         
-        # Create MongoDB client with SSL configuration
+        # Create MongoDB client with updated SSL configuration
         client = MongoClient(
             connection_string,
             ssl=True,
             tlsAllowInvalidCertificates=True,
-            serverSelectionTimeoutMS=30000,  # Increased timeout
+            tlsAllowInvalidHostnames=True,
+            serverSelectionTimeoutMS=30000,
             connectTimeoutMS=30000,
             socketTimeoutMS=30000,
             retryWrites=True,
-            w='majority'
+            w='majority',
+            ssl_cert_reqs=ssl.CERT_NONE  # Disable certificate verification
         )
         
         # Test the connection
