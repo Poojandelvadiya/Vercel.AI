@@ -5,3 +5,4 @@ Flask-Mail
 mysql-connector-python
 gunicorn
 Pillow
+pymongo
