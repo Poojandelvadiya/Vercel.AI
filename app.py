@@ -66,14 +66,13 @@ def get_db_connection():
         print(f"MongoDB Connection Error: {str(e)}")
         return None
 
-# Initialize database and collections
 def init_db():
     try:
         db = get_db_connection()
-        if not db:
+        if db is None:
             print("Failed to connect to MongoDB in init_db")
-            return
-        
+            return False
+
         # Create collections if they don't exist
         if 'users' not in db.list_collection_names():
             db.create_collection('users')
@@ -82,41 +81,44 @@ def init_db():
         if 'login_history' not in db.list_collection_names():
             db.create_collection('login_history')
             print("Created login_history collection")
-        
+
         # Create indexes
         db.users.create_index([("username", 1)], unique=True)
         db.users.create_index([("email", 1)], unique=True)
         db.login_history.create_index([("user_id", 1)])
         db.login_history.create_index([("login_time", 1)])
-        
-        # Check if we need to insert sample users
+
+        # Check if users collection is empty
         if db.users.count_documents({}) == 0:
+            # Create sample users with hashed passwords
             sample_users = [
                 {
-                    'username': 'admin',
+                    'username': 'admin@example.com',
                     'email': 'admin@example.com',
                     'password': generate_password_hash('admin123'),
                     'created_at': datetime.utcnow()
                 },
                 {
-                    'username': 'test',
+                    'username': 'test@example.com',
                     'email': 'test@example.com',
                     'password': generate_password_hash('test123'),
                     'created_at': datetime.utcnow()
                 },
                 {
-                    'username': 'user1',
+                    'username': 'user1@example.com',
                     'email': 'user1@example.com',
                     'password': generate_password_hash('password123'),
                     'created_at': datetime.utcnow()
                 }
             ]
             db.users.insert_many(sample_users)
-            print("Inserted sample users")
+            print("Added sample users")
         
         print("Database initialized successfully!")
+        return True
     except Exception as e:
-        print(f"Database initialization error: {e}")
+        print(f"Error initializing database: {str(e)}")
+        return False
 
 # Configure Gemini AI
 genai.configure(api_key="AIzaSyDlNE1t-0s005OZ2vc7jLN0Fl8iMJXxdO4")
@@ -553,55 +555,67 @@ if __name__ == "__main__":
         try:
             # Connect to database to create test users
             db = get_db_connection()
-            cursor = db.users.find()
-            
-            # Create test users only if they don't exist
-            test_users = [
-                {
-                    'username': 'test1',
-                    'email': 'test1@example.com',
-                    'password': 'test123'
-                },
-                {
-                    'username': 'test2',
-                    'email': 'test2@example.com',
-                    'password': 'test123'
-                }
-            ]
-            
-            for user_data in test_users:
-                try:
-                    # Check if user already exists
-                    existing_user = db.users.find_one({'username': user_data['username']})
-                    
-                    if not existing_user:
-                        # Hash the password
-                        hashed_password = generate_password_hash(user_data['password'])
+            if db is not None:  # Changed from 'if db:' to 'if db is not None:'
+                cursor = db.users.find()
+                
+                # Create test users only if they don't exist
+                test_users = [
+                    {
+                        'username': 'test1',
+                        'email': 'test1@example.com',
+                        'password': 'test123'
+                    },
+                    {
+                        'username': 'test2',
+                        'email': 'test2@example.com',
+                        'password': 'test123'
+                    }
+                ]
+                
+                for user_data in test_users:
+                    try:
+                        # Check if user already exists
+                        existing_user = db.users.find_one({'username': user_data['username']})
                         
-                        # Insert new user
-                        db.users.insert_one({
-                            'username': user_data['username'],
-                            'email': user_data['email'],
-                            'password': hashed_password
-                        })
-                        
-                        print(f"Created test user: {user_data['username']}")
-                    else:
-                        print(f"Test user {user_data['username']} already exists")
-                        
-                except Exception as e:
-                    print(f"Error creating test user {user_data['username']}: {str(e)}")
-            
-            # Verify test users exist
-            existing_users = db.users.find()
-            print("\nExisting users in database:")
-            for user in existing_users:
-                print(f"Username: {user['username']}, Email: {user['email']}")
+                        if not existing_user:
+                            # Hash the password
+                            hashed_password = generate_password_hash(user_data['password'])
+                            
+                            # Insert new user
+                            db.users.insert_one({
+                                'username': user_data['username'],
+                                'email': user_data['email'],
+                                'password': hashed_password
+                            })
+                            
+                            print(f"Created test user: {user_data['username']}")
+                        else:
+                            print(f"Test user {user_data['username']} already exists")
+                            
+                    except Exception as e:
+                        print(f"Error creating test user {user_data['username']}: {str(e)}")
+                
+                # Verify test users exist
+                existing_users = db.users.find()
+                print("\nExisting users in database:")
+                for user in existing_users:
+                    print(f"Username: {user['username']}, Email: {user['email']}")
             
         except Exception as e:
             print(f"Error setting up test users: {str(e)}")
-        
-    app.run(debug=True)
+    
+    # Use a more stable server configuration
+    try:
+        app.run(
+            host='0.0.0.0',
+            port=5000,
+            debug=True,
+            use_reloader=False  # Disable reloader to prevent socket issues
+        )
+    except Exception as e:
+        print(f"Server error: {str(e)}")
+        # Fallback to basic configuration
+        app.run(debug=True)
 
 def edit_file():
     pass
