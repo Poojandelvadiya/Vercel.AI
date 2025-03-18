@@ -59,8 +59,7 @@ def get_db_connection():
             connectTimeoutMS=30000,
             socketTimeoutMS=30000,
             retryWrites=True,
-            w='majority',
-            ssl_cert_reqs=ssl.CERT_NONE  # Disable certificate verification
+            w='majority'
         )
         
         # Test the connection
