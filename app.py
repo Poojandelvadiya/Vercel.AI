@@ -13,6 +13,10 @@ import urllib.parse
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # PIL imports
 from PIL import Image  # Basic image handling
@@ -40,22 +44,33 @@ app.config['MAIL_DEFAULT_SENDER'] = 'poojandelvadiya27@gmail.com'
 mail = Mail(app)
 
 # MongoDB Configuration
-MONGODB_USERNAME = urllib.parse.quote_plus("poojandelvadiya27")
-MONGODB_PASSWORD = urllib.parse.quote_plus("Poojan27@")
-MONGODB_CLUSTER = "cluster0.6dw8w"
-MONGODB_URI = f"mongodb+srv://{MONGODB_USERNAME}:{MONGODB_PASSWORD}@{MONGODB_CLUSTER}.mongodb.net/chatbot_db?retryWrites=true&w=majority&connectTimeoutMS=5000&socketTimeoutMS=5000"
+MONGODB_USERNAME = urllib.parse.quote_plus(os.getenv('MONGODB_USERNAME', 'poojandelvadiya27'))
+MONGODB_PASSWORD = urllib.parse.quote_plus(os.getenv('MONGODB_PASSWORD', 'Poojan27@'))
+MONGODB_CLUSTER = os.getenv('MONGODB_CLUSTER', 'cluster0.6dw8w')
+MONGODB_DATABASE = os.getenv('MONGODB_DATABASE', 'chatbot_db')
+
+MONGODB_URI = f"mongodb+srv://{MONGODB_USERNAME}:{MONGODB_PASSWORD}@{MONGODB_CLUSTER}.mongodb.net/{MONGODB_DATABASE}?retryWrites=true&w=majority"
 
 def get_db_connection():
     try:
-        client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
-        db = client.chatbot_db
+        client = MongoClient(
+            MONGODB_URI,
+            serverSelectionTimeoutMS=30000,
+            connectTimeoutMS=30000,
+            socketTimeoutMS=30000,
+            ssl=True,
+            tlsAllowInvalidCertificates=True,
+            tlsAllowInvalidHostnames=True,
+            retryWrites=True,
+            w='majority'
+        )
+        db = client[MONGODB_DATABASE]
         # Test the connection
         client.server_info()
         print("Successfully connected to MongoDB!")
         return db
     except Exception as e:
         print(f"MongoDB Connection Error: {str(e)}")
-        # Instead of raising, return None and handle it in the routes
         return None
 
 # Initialize database and collections
