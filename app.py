@@ -43,7 +43,7 @@ mail = Mail(app)
 # MongoDB Configuration
 MONGODB_USERNAME = urllib.parse.quote_plus("poojandelvadiya27")
 MONGODB_PASSWORD = urllib.parse.quote_plus("Poojan27@")
-MONGODB_URI = f"mongodb+srv://{MONGODB_USERNAME}:{MONGODB_PASSWORD}@cluster0.6dw8w.mongodb.net/chatbot_db?retryWrites=true&w=majority&directConnection=true"
+MONGODB_URI = f"mongodb+srv://{MONGODB_USERNAME}:{MONGODB_PASSWORD}@cluster0.6dw8w.mongodb.net/chatbot_db?retryWrites=true&w=majority"
 
 # SSH Configuration
 SSH_HOST = "cluster0.6dw8w.mongodb.net"  # MongoDB Atlas cluster hostname
@@ -92,8 +92,7 @@ def get_db_connection():
             connectTimeoutMS=5000,
             socketTimeoutMS=5000,
             tlsAllowInvalidCertificates=True,
-            tlsAllowInvalidHostnames=True,
-            directConnection=True
+            tlsAllowInvalidHostnames=True
         )
         
         # Test the connection
