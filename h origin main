@@ -223,3 +223,8 @@
  </body>[m
  </html>[m
 \ No newline at end of file[m
+[33mcommit aa26917067bff6b04c8e1b26a16ca7627cdbd550[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m
+Author: Darshna <darshnaypatel2329@gmail.com>
+Date:   Wed Mar 19 19:41:11 2025 +0530
+
+    Update MongoDB connection with SSH tunneling and project documentation

@@ -41,7 +41,7 @@ app.config['MAIL_DEFAULT_SENDER'] = 'poojandelvadiya27@gmail.com'
 mail = Mail(app)
 
 # MongoDB Configuration
-MONGODB_URI = "mongodb+srv://poojandelvadiya27:Poojan27@@cluster0.6dw8w.mongodb.net/chatbot_db?retryWrites=true&w=majority"
+MONGODB_URI = "mongodb+srv://poojandelvadiya27:Poojan27@@cluster0.6dw8w.mongodb.net/chatbot_db?retryWrites=true&w=majority&directConnection=true"
 
 # SSH Configuration
 SSH_HOST = "cluster0.6dw8w.mongodb.net"  # MongoDB Atlas cluster hostname
@@ -83,79 +83,67 @@ def setup_ssh_tunnel():
 
 def get_db_connection():
     try:
-        # Parse username and password for URL encoding
-        username = urllib.parse.quote_plus("poojandelvadiya27")
-        password = urllib.parse.quote_plus("Poojan27@")
-        
-        # Construct connection string with encoded credentials
-        connection_string = f"mongodb+srv://{username}:{password}@{MONGODB_HOST}/chatbot_db?retryWrites=true&w=majority"
-        
-        # Create MongoDB client with minimal configuration
+        # Initialize MongoDB client with connection options
         client = MongoClient(
-            connection_string,
-            serverSelectionTimeoutMS=5000,
+            MONGODB_URI,
+            serverSelectionTimeoutMS=5000,  # 5 seconds timeout
             connectTimeoutMS=5000,
             socketTimeoutMS=5000,
-            tlsAllowInvalidCertificates=True  # Add this for development
+            tlsAllowInvalidCertificates=True,
+            tlsAllowInvalidHostnames=True,
+            directConnection=True
         )
         
         # Test the connection
         client.server_info()
-        print("Successfully connected to MongoDB!")
-        
-        # Get database
-        db = client.chatbot_db
-        return db
-        
+        return client.chatbot_db
     except Exception as e:
-        print(f"MongoDB Connection Error: {str(e)}")
-        print("Please check your network connection and ensure your IP is whitelisted in MongoDB Atlas.")
+        print(f"Error connecting to MongoDB: {e}")
         return None
 
 def init_db():
+    db = get_db_connection()
+    if db is None:
+        print("Failed to connect to database")
+        return
+    
     try:
-        db = get_db_connection()
-        if db is None:
-            print("Failed to initialize database: Could not establish connection")
-            return False
-
         # Create collections if they don't exist
-        if "users" not in db.list_collection_names():
-            db.create_collection("users")
-            # Create indexes for better performance
-            db.users.create_index([("email", 1)], unique=True)
-            db.users.create_index([("username", 1)], unique=True)
-
-        if "login_history" not in db.list_collection_names():
-            db.create_collection("login_history")
-            # Create index on user_id and login_time
-            db.login_history.create_index([("user_id", 1), ("login_time", -1)])
-
-        # Insert sample users if the users collection is empty
+        if 'users' not in db.list_collection_names():
+            db.create_collection('users')
+        if 'chat_history' not in db.list_collection_names():
+            db.create_collection('chat_history')
+        
+        # Create indexes
+        db.users.create_index([('username', 1)], unique=True)
+        db.users.create_index([('email', 1)], unique=True)
+        db.chat_history.create_index([('user_id', 1)])
+        db.chat_history.create_index([('timestamp', 1)])
+        
+        # Insert sample users if users collection is empty
         if db.users.count_documents({}) == 0:
             sample_users = [
                 {
-                    "username": "admin",
-                    "email": "admin@example.com",
-                    "password": generate_password_hash("admin123"),
-                    "role": "admin",
-                    "created_at": datetime.utcnow()
+                    'username': 'admin',
+                    'email': 'admin@example.com',
+                    'password': generate_password_hash('admin123'),
+                    'role': 'admin',
+                    'created_at': datetime.utcnow()
                 },
                 {
-                    "username": "test",
-                    "email": "test@example.com",
-                    "password": generate_password_hash("test123"),
-                    "role": "user",
-                    "created_at": datetime.utcnow()
+                    'username': 'user',
+                    'email': 'user@example.com',
+                    'password': generate_password_hash('user123'),
+                    'role': 'user',
+                    'created_at': datetime.utcnow()
                 }
             ]
             db.users.insert_many(sample_users)
-            print("Sample users created successfully!")
-
-        return True
+            print("Sample users created")
+        
+        print("Database initialized successfully")
     except Exception as e:
-        print(f"Database initialization error: {str(e)}")
-        return False
+        print(f"Error initializing database: {e}")
 
 # Configure Gemini AI
 genai.configure(api_key="AIzaSyDlNE1t-0s005OZ2vc7jLN0Fl8iMJXxdO4")
