@@ -67,60 +67,52 @@ def get_db_connection():
         
     except Exception as e:
         print(f"MongoDB Connection Error: {str(e)}")
+        print("Please check your network connection and ensure your IP is whitelisted in MongoDB Atlas.")
         return None
 
 def init_db():
     try:
         db = get_db_connection()
         if db is None:
-            print("Failed to connect to MongoDB in init_db")
+            print("Failed to initialize database: Could not establish connection")
             return False
 
         # Create collections if they don't exist
-        if 'users' not in db.list_collection_names():
-            db.create_collection('users')
-            print("Created users collection")
-        
-        if 'login_history' not in db.list_collection_names():
-            db.create_collection('login_history')
-            print("Created login_history collection")
+        if "users" not in db.list_collection_names():
+            db.create_collection("users")
+            # Create indexes for better performance
+            db.users.create_index([("email", 1)], unique=True)
+            db.users.create_index([("username", 1)], unique=True)
 
-        # Create indexes
-        db.users.create_index([("username", 1)], unique=True)
-        db.users.create_index([("email", 1)], unique=True)
-        db.login_history.create_index([("user_id", 1)])
-        db.login_history.create_index([("login_time", 1)])
+        if "login_history" not in db.list_collection_names():
+            db.create_collection("login_history")
+            # Create index on user_id and login_time
+            db.login_history.create_index([("user_id", 1), ("login_time", -1)])
 
-        # Check if users collection is empty
+        # Insert sample users if the users collection is empty
         if db.users.count_documents({}) == 0:
-            # Create sample users with hashed passwords
             sample_users = [
                 {
-                    'username': 'admin@example.com',
-                    'email': 'admin@example.com',
-                    'password': generate_password_hash('admin123'),
-                    'created_at': datetime.utcnow()
+                    "username": "admin",
+                    "email": "admin@example.com",
+                    "password": generate_password_hash("admin123"),
+                    "role": "admin",
+                    "created_at": datetime.utcnow()
                 },
                 {
-                    'username': 'test@example.com',
-                    'email': 'test@example.com',
-                    'password': generate_password_hash('test123'),
-                    'created_at': datetime.utcnow()
-                },
-                {
-                    'username': 'user1@example.com',
-                    'email': 'user1@example.com',
-                    'password': generate_password_hash('password123'),
-                    'created_at': datetime.utcnow()
+                    "username": "test",
+                    "email": "test@example.com",
+                    "password": generate_password_hash("test123"),
+                    "role": "user",
+                    "created_at": datetime.utcnow()
                 }
             ]
             db.users.insert_many(sample_users)
-            print("Added sample users")
-        
-        print("Database initialized successfully!")
+            print("Sample users created successfully!")
+
         return True
     except Exception as e:
-        print(f"Error initializing database: {str(e)}")
+        print(f"Database initialization error: {str(e)}")
         return False
 
 # Configure Gemini AI

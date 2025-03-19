@@ -1,0 +1,225 @@
+[1mdiff --git a/app.py b/app.py[m
+[1mindex 57d8054..3db73b9 100644[m
+[1m--- a/app.py[m
+[1m+++ b/app.py[m
+[36m@@ -37,31 +37,34 @@[m [mapp.config['MAIL_DEFAULT_SENDER'] = 'poojandelvadiya27@gmail.com'[m
+ mail = Mail(app)[m
+ [m
+ # MongoDB Configuration[m
+[31m-MONGODB_USERNAME = urllib.parse.quote_plus(os.getenv('MONGODB_USERNAME', 'poojandelvadiya27'))[m
+[31m-MONGODB_PASSWORD = urllib.parse.quote_plus(os.getenv('MONGODB_PASSWORD', 'Poojan27@'))[m
+[31m-MONGODB_CLUSTER = os.getenv('MONGODB_CLUSTER', 'cluster0.6dw8w')[m
+[31m-MONGODB_DATABASE = os.getenv('MONGODB_DATABASE', 'chatbot_db')[m
+[31m-[m
+[31m-MONGODB_URI = f"mongodb+srv://{MONGODB_USERNAME}:{MONGODB_PASSWORD}@{MONGODB_CLUSTER}.mongodb.net/{MONGODB_DATABASE}?retryWrites=true&w=majority"[m
+[32m+[m[32mMONGODB_URI = "mongodb+srv://poojandelvadiya27:Poojan27@@cluster0.6dw8w.mongodb.net/chatbot_db?retryWrites=true&w=majority&tlsAllowInvalidCertificates=true"[m
+ [m
+ def get_db_connection():[m
+     try:[m
+[32m+[m[32m        # Parse username and password for URL encoding[m
+[32m+[m[32m        username = urllib.parse.quote_plus("poojandelvadiya27")[m
+[32m+[m[32m        password = urllib.parse.quote_plus("Poojan27@")[m
+[32m+[m[41m        [m
+[32m+[m[32m        # Construct connection string with encoded credentials[m
+[32m+[m[32m        connection_string = f"mongodb+srv://{username}:{password}@cluster0.6dw8w.mongodb.net/chatbot_db?retryWrites=true&w=majority&tlsAllowInvalidCertificates=true"[m
+[32m+[m[41m        [m
+[32m+[m[32m        # Create MongoDB client with SSL configuration[m
+         client = MongoClient([m
+[31m-            MONGODB_URI,[m
+[31m-            serverSelectionTimeoutMS=30000,[m
+[31m-            connectTimeoutMS=30000,[m
+[31m-            socketTimeoutMS=30000,[m
+[32m+[m[32m            connection_string,[m
+             ssl=True,[m
+             tlsAllowInvalidCertificates=True,[m
+[31m-            tlsAllowInvalidHostnames=True,[m
+[31m-            retryWrites=True,[m
+[31m-            w='majority'[m
+[32m+[m[32m            serverSelectionTimeoutMS=5000,[m
+[32m+[m[32m            connectTimeoutMS=5000,[m
+[32m+[m[32m            socketTimeoutMS=5000[m
+         )[m
+[31m-        db = client[MONGODB_DATABASE][m
+[32m+[m[41m        [m
+         # Test the connection[m
+         client.server_info()[m
+[31m-        print("Successfully connected to MongoDB!")[m
+[32m+[m[41m        [m
+[32m+[m[32m        # Get database[m
+[32m+[m[32m        db = client.chatbot_db[m
+         return db[m
+[32m+[m[41m        [m
+     except Exception as e:[m
+         print(f"MongoDB Connection Error: {str(e)}")[m
+         return None[m
+[1mdiff --git a/templates/Register.html b/templates/Register.html[m
+[1mindex f608a71..6a1d241 100644[m
+[1m--- a/templates/Register.html[m
+[1m+++ b/templates/Register.html[m
+[36m@@ -4,88 +4,97 @@[m
+     <meta charset="UTF-8">[m
+     <meta name="viewport" content="width=device-width, initial-scale=1.0">[m
+     <title>Register - AI Chatbot</title>[m
+[31m-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css">[m
+[31m-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">[m
+[32m+[m[32m    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">[m
+     <style>[m
+[31m-        body {[m
+[31m-            background-color: #f5f5f5;[m
+[31m-            font-family: 'Arial', sans-serif;[m
+[31m-        }[m
+         .register-container {[m
+[31m-            max-width: 450px;[m
+[31m-            margin: 100px auto;[m
+[31m-            padding: 30px;[m
+[31m-            background: white;[m
+[31m-            border-radius: 10px;[m
+[31m-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);[m
+[31m-        }[m
+[31m-        .form-control {[m
+[31m-            margin-bottom: 15px;[m
+[31m-            border-radius: 5px;[m
+[32m+[m[32m            min-height: 100vh;[m
+[32m+[m[32m            display: flex;[m
+[32m+[m[32m            align-items: center;[m
+[32m+[m[32m            justify-content: center;[m
+[32m+[m[32m            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);[m
+         }[m
+[31m-        .btn-primary {[m
+[32m+[m[32m        .register-form {[m
+[32m+[m[32m            background: white;[m
+[32m+[m[32m            padding: 2rem;[m
+[32m+[m[32m            border-radius: 1rem;[m
+[32m+[m[32m            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);[m
+             width: 100%;[m
+[31m-            background-color: #007bff;[m
+[31m-            border: none;[m
+[31m-            padding: 10px;[m
+[31m-            font-weight: bold;[m
+[31m-            border-radius: 5px;[m
+[31m-        }[m
+[31m-        .btn-primary:hover {[m
+[31m-            background-color: #0069d9;[m
+[32m+[m[32m            max-width: 400px;[m
+         }[m
+[31m-        .form-label {[m
+[31m-            font-weight: 500;[m
+[32m+[m[32m        .flash-message {[m
+[32m+[m[32m            padding: 0.75rem;[m
+[32m+[m[32m            margin-bottom: 1rem;[m
+[32m+[m[32m            border-radius: 0.5rem;[m
+[32m+[m[32m            text-align: center;[m
+         }[m
+[31m-        .form-text {[m
+[31m-            font-size: 0.85rem;[m
+[32m+[m[32m        .flash-error {[m
+[32m+[m[32m            background-color: #fee2e2;[m
+[32m+[m[32m            color: #dc2626;[m
+[32m+[m[32m            border: 1px solid #fecaca;[m
+         }[m
+[31m-        .alert {[m
+[31m-            margin-bottom: 20px;[m
+[31m-            border-radius: 5px;[m
+[32m+[m[32m        .flash-success {[m
+[32m+[m[32m            background-color: #dcfce7;[m
+[32m+[m[32m            color: #16a34a;[m
+[32m+[m[32m            border: 1px solid #bbf7d0;[m
+         }[m
+     </style>[m
+ </head>[m
+[31m-<body>[m
+[31m-    <div class="container">[m
+[31m-        <div class="register-container">[m
+[31m-            <h2 class="text-center mb-4">Create Account</h2>[m
+[31m-            [m
+[31m-            {% with messages = get_flashed_messages(with_categories=true) %}[m
+[31m-                {% if messages %}[m
+[31m-                    {% for category, message in messages %}[m
+[31m-                        <div class="alert alert-{{ category }}">{{ message }}</div>[m
+[31m-                    {% endfor %}[m
+[31m-                {% endif %}[m
+[31m-            {% endwith %}[m
+[32m+[m[32m<body class="register-container">[m
+[32m+[m[32m    <div class="register-form">[m
+[32m+[m[32m        <h2 class="text-2xl font-bold text-center mb-6 text-gray-800">Create Account</h2>[m
+[32m+[m[41m        [m
+[32m+[m[32m        {% with messages = get_flashed_messages(with_categories=true) %}[m
+[32m+[m[32m            {% if messages %}[m
+[32m+[m[32m                {% for category, message in messages %}[m
+[32m+[m[32m                    <div class="flash-message flash-{{ category }}">[m
+[32m+[m[32m                        {{ message }}[m
+[32m+[m[32m                    </div>[m
+[32m+[m[32m                {% endfor %}[m
+[32m+[m[32m            {% endif %}[m
+[32m+[m[32m        {% endwith %}[m
+[32m+[m[41m        [m
+[32m+[m[32m        <form method="POST" action="{{ url_for('register') }}" class="space-y-4">[m
+[32m+[m[32m            <div>[m
+[32m+[m[32m                <label for="username" class="block text-sm font-medium text-gray-700">Username</label>[m
+[32m+[m[32m                <input type="text"[m[41m [m
+[32m+[m[32m                       id="username"[m[41m [m
+[32m+[m[32m                       name="username"[m[41m [m
+[32m+[m[32m                       required[m[41m [m
+[32m+[m[32m                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">[m
+[32m+[m[32m            </div>[m
+             [m
+[31m-            <form method="POST" action="{{ url_for('register') }}">[m
+[31m-                <div class="mb-3">[m
+[31m-                    <label for="username" class="form-label">Username</label>[m
+[31m-                    <input type="text" class="form-control" id="username" name="username" required>[m
+[31m-                </div>[m
+[31m-                [m
+[31m-                <div class="mb-3">[m
+[31m-                    <label for="email" class="form-label">Email Address</label>[m
+[31m-                    <input type="email" class="form-control" id="email" name="email" required>[m
+[31m-                    <div class="form-text">We'll never share your email with anyone else.</div>[m
+[31m-                </div>[m
+[31m-                [m
+[31m-                <div class="mb-3">[m
+[31m-                    <label for="password" class="form-label">Password</label>[m
+[31m-                    <input type="password" class="form-control" id="password" name="password" required>[m
+[31m-                    <div class="form-text">Password must be at least 8 characters long.</div>[m
+[31m-                </div>[m
+[31m-                [m
+[31m-                <button type="submit" class="btn btn-primary">Register</button>[m
+[31m-            </form>[m
+[32m+[m[32m            <div>[m
+[32m+[m[32m                <label for="email" class="block text-sm font-medium text-gray-700">Email</label>[m
+[32m+[m[32m                <input type="email"[m[41m [m
+[32m+[m[32m                       id="email"[m[41m [m
+[32m+[m[32m                       name="email"[m[41m [m
+[32m+[m[32m                       required[m[41m [m
+[32m+[m[32m                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">[m
+[32m+[m[32m            </div>[m
+             [m
+[31m-            <div class="text-center mt-3">[m
+[31m-                <p>Already have an account? <a href="{{ url_for('signin') }}">Sign In</a></p>[m
+[32m+[m[32m            <div>[m
+[32m+[m[32m                <label for="password" class="block text-sm font-medium text-gray-700">Password</label>[m
+[32m+[m[32m                <input type="password"[m[41m [m
+[32m+[m[32m                       id="password"[m[41m [m
+[32m+[m[32m                       name="password"[m[41m [m
+[32m+[m[32m                       required[m[41m [m
+[32m+[m[32m                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">[m
+             </div>[m
+[32m+[m[41m            [m
+[32m+[m[32m            <button type="submit"[m[41m [m
+[32m+[m[32m                    class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">[m
+[32m+[m[32m                Register[m
+[32m+[m[32m            </button>[m
+[32m+[m[32m        </form>[m
+[32m+[m[41m        [m
+[32m+[m[32m        <div class="mt-4 text-center">[m
+[32m+[m[32m            <p class="text-sm text-gray-600">[m
+[32m+[m[32m                Already have an account?[m[41m [m
+[32m+[m[32m                <a href="{{ url_for('signin') }}" class="font-medium text-indigo-600 hover:text-indigo-500">[m
+[32m+[m[32m                    Sign in[m
+[32m+[m[32m                </a>[m
+[32m+[m[32m            </p>[m
+         </div>[m
+     </div>[m
+[31m-[m
+[31m-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>[m
+ </body>[m
+ </html>[m
+\ No newline at end of file[m
