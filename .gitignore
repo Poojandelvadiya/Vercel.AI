@@ -44,4 +44,10 @@ instance/
 
 # OS specific
 .DS_Store
-Thumbs.db 
+Thumbs.db
+
+# SSH Keys
+mongodb_ssh_key
+mongodb_ssh_key.pub
+*.pem
+*.key 

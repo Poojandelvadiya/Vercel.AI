@@ -19,6 +19,9 @@ import base64
 from PIL import Image
 from io import BytesIO
 import ssl
+import paramiko
+import socks
+import socket
 
 # Load environment variables
 load_dotenv()
@@ -40,14 +43,54 @@ mail = Mail(app)
 # MongoDB Configuration
 MONGODB_URI = "mongodb+srv://poojandelvadiya27:Poojan27@@cluster0.6dw8w.mongodb.net/chatbot_db?retryWrites=true&w=majority"
 
+# SSH Configuration
+SSH_HOST = "your-ssh-host"  # Replace with your SSH host
+SSH_PORT = 22  # Default SSH port
+SSH_USERNAME = "your-ssh-username"  # Replace with your SSH username
+SSH_KEY_PATH = "mongodb_ssh_key"  # Path to your SSH private key
+MONGODB_HOST = "cluster0.6dw8w.mongodb.net"  # MongoDB Atlas host
+MONGODB_PORT = 27017  # MongoDB port
+
+def setup_ssh_tunnel():
+    try:
+        # Create SSH client
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        
+        # Load private key
+        private_key = paramiko.RSAKey.from_private_key_file(SSH_KEY_PATH)
+        
+        # Connect to SSH server
+        ssh.connect(
+            hostname=SSH_HOST,
+            port=SSH_PORT,
+            username=SSH_USERNAME,
+            pkey=private_key
+        )
+        
+        # Create SOCKS proxy
+        socks.set_default_proxy(socks.SOCKS5, "127.0.0.1", 1080)
+        socket.socket = socks.socksocket
+        
+        return ssh
+    except Exception as e:
+        print(f"SSH Tunnel Error: {str(e)}")
+        return None
+
 def get_db_connection():
     try:
+        # Setup SSH tunnel
+        ssh = setup_ssh_tunnel()
+        if ssh is None:
+            print("Failed to establish SSH tunnel")
+            return None
+            
         # Parse username and password for URL encoding
         username = urllib.parse.quote_plus("poojandelvadiya27")
         password = urllib.parse.quote_plus("Poojan27@")
         
         # Construct connection string with encoded credentials
-        connection_string = f"mongodb+srv://{username}:{password}@cluster0.6dw8w.mongodb.net/chatbot_db?retryWrites=true&w=majority"
+        connection_string = f"mongodb+srv://{username}:{password}@{MONGODB_HOST}/chatbot_db?retryWrites=true&w=majority"
         
         # Create MongoDB client with minimal configuration
         client = MongoClient(
@@ -59,7 +102,7 @@ def get_db_connection():
         
         # Test the connection
         client.server_info()
-        print("Successfully connected to MongoDB!")
+        print("Successfully connected to MongoDB through SSH tunnel!")
         
         # Get database
         db = client.chatbot_db
@@ -69,6 +112,9 @@ def get_db_connection():
         print(f"MongoDB Connection Error: {str(e)}")
         print("Please check your network connection and ensure your IP is whitelisted in MongoDB Atlas.")
         return None
+    finally:
+        if 'ssh' in locals():
+            ssh.close()
 
 def init_db():
     try:
