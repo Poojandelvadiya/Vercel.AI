@@ -225,7 +225,7 @@ def signin():
         
         try:
             db = get_db_connection()
-            if not db:
+            if db is None:
                 flash('Database connection error. Please try again later.', 'error')
                 return render_template('signin.html')
             
