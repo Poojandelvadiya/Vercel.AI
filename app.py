@@ -38,7 +38,7 @@ app.config['MAIL_DEFAULT_SENDER'] = 'poojandelvadiya27@gmail.com'
 mail = Mail(app)
 
 # MongoDB Configuration
-MONGODB_URI = "mongodb+srv://poojandelvadiya27:Poojan27@@cluster0.6dw8w.mongodb.net/chatbot_db?retryWrites=true&w=majority&tlsAllowInvalidCertificates=true"
+MONGODB_URI = "mongodb+srv://poojandelvadiya27:Poojan27@@cluster0.6dw8w.mongodb.net/chatbot_db?retryWrites=true&w=majority"
 
 def get_db_connection():
     try:
@@ -46,20 +46,15 @@ def get_db_connection():
         username = urllib.parse.quote_plus("poojandelvadiya27")
         password = urllib.parse.quote_plus("Poojan27@")
         
-        # Construct connection string with encoded credentials and SSL parameters
-        connection_string = f"mongodb+srv://{username}:{password}@cluster0.6dw8w.mongodb.net/chatbot_db?retryWrites=true&w=majority&tlsAllowInvalidCertificates=true&tlsAllowInvalidHostnames=true"
+        # Construct connection string with encoded credentials
+        connection_string = f"mongodb+srv://{username}:{password}@cluster0.6dw8w.mongodb.net/chatbot_db?retryWrites=true&w=majority"
         
-        # Create MongoDB client with updated SSL configuration
+        # Create MongoDB client with minimal configuration
         client = MongoClient(
             connection_string,
-            ssl=True,
-            tlsAllowInvalidCertificates=True,
-            tlsAllowInvalidHostnames=True,
-            serverSelectionTimeoutMS=30000,
-            connectTimeoutMS=30000,
-            socketTimeoutMS=30000,
-            retryWrites=True,
-            w='majority'
+            serverSelectionTimeoutMS=5000,
+            connectTimeoutMS=5000,
+            socketTimeoutMS=5000
         )
         
         # Test the connection
