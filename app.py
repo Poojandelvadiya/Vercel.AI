@@ -252,7 +252,7 @@ def signin():
             print(f"Signin error: {e}")
             flash('An error occurred during login. Please try again later.', 'error')
             return render_template('signin.html')
-    
+            
     return render_template('signin.html')
 
 @app.route('/forgot-password', methods=['GET', 'POST'])
@@ -289,8 +289,8 @@ def forgot_password():
                 try:
                     # Send email
                     msg = Message('Password Reset Request',
-                                sender=app.config['MAIL_DEFAULT_SENDER'],
-                                recipients=[email])
+                                  sender=app.config['MAIL_DEFAULT_SENDER'],
+                                  recipients=[email])
                     msg.body = f'''Hi {user['username']},
 
 You have requested to reset your password. Please click on the following link to reset your password:
@@ -305,7 +305,6 @@ Your AI Chatbot Team'''
                     mail.send(msg)
                     flash('Password reset instructions have been sent to your email.', 'success')
                     return redirect(url_for('signin'))
-                    
                 except Exception as e:
                     print(f"Email sending error: {e}")
                     flash('Error sending email. Please try again later.', 'error')
@@ -516,8 +515,6 @@ def generate_image():
             'lang': 'en'
         }
 
-        print(f"Searching for images with prompt: {prompt}")  # Debug log
-        
         response = requests.get(
             PIXABAY_API_URL,
             params=params,
@@ -577,23 +574,23 @@ if __name__ == "__main__":
             if db is not None:  # Changed from 'if db:' to 'if db is not None:'
                 cursor = db.users.find()
                 
-                # Create test users only if they don't exist
-                test_users = [
-                    {
-                        'username': 'test1',
-                        'email': 'test1@example.com',
-                        'password': 'test123'
-                    },
-                    {
-                        'username': 'test2',
-                        'email': 'test2@example.com',
-                        'password': 'test123'
-                    }
-                ]
-                
-                for user_data in test_users:
+            # Create test users only if they don't exist
+            test_users = [
+                {
+                    'username': 'test1',
+                    'email': 'test1@example.com',
+                    'password': 'test123'
+                },
+                {
+                    'username': 'test2',
+                    'email': 'test2@example.com',
+                    'password': 'test123'
+                }
+            ]
+            
+            for user_data in test_users:
                     try:
-                        # Check if user already exists
+                # Check if user already exists
                         existing_user = db.users.find_one({'username': user_data['username']})
                         
                         if not existing_user:
@@ -614,10 +611,9 @@ if __name__ == "__main__":
                     except Exception as e:
                         print(f"Error creating test user {user_data['username']}: {str(e)}")
                 
-                # Verify test users exist
-                existing_users = db.users.find()
-                print("\nExisting users in database:")
-                for user in existing_users:
+                        existing_users = db.users.find()
+            print("\nExisting users in database:")
+            for user in existing_users:
                     print(f"Username: {user['username']}, Email: {user['email']}")
             
         except Exception as e:
@@ -634,7 +630,7 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"Server error: {str(e)}")
         # Fallback to basic configuration
-        app.run(debug=True)
+    app.run(debug=True)
 
 def edit_file():
     pass
