@@ -1,0 +1,59 @@
+{
+    "collections": {
+        "users": [
+            {
+                "username": "admin",
+                "email": "admin@example.com",
+                "password": "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewFX.gtkn.PaPQO2",
+                "reset_token": null,
+                "created_at": {"$date": "2024-01-01T00:00:00Z"}
+            },
+            {
+                "username": "test",
+                "email": "test@example.com",
+                "password": "$2b$12$8NKxJWJD.a/w8.4c8TvCdu/P.JK1Dz.5Df9KNPPUQEiwlKqfFWGYe",
+                "reset_token": null,
+                "created_at": {"$date": "2024-01-01T00:00:00Z"}
+            },
+            {
+                "username": "user1",
+                "email": "user1@example.com",
+                "password": "$2b$12$B5uE2n0PRgz8N8C2x8LWs.XWRV8Ej.6Qz5gBwcEZJX9HnVKnq3vyq",
+                "reset_token": null,
+                "created_at": {"$date": "2024-01-01T00:00:00Z"}
+            }
+        ],
+        "login_history": []
+    },
+    "indexes": {
+        "users": [
+            {
+                "key": {"username": 1},
+                "name": "username_1",
+                "unique": true
+            },
+            {
+                "key": {"email": 1},
+                "name": "email_1",
+                "unique": true
+            }
+        ],
+        "login_history": [
+            {
+                "key": {"user_id": 1, "login_time": -1},
+                "name": "user_id_login_time"
+            }
+        ],
+        "chat_history": [
+            {
+                "key": {"user_id": 1, "timestamp": -1},
+                "name": "user_id_timestamp"
+            },
+            {
+                "key": {"timestamp": 1},
+                "name": "timestamp_ttl",
+                "expireAfterSeconds": 2592000
+            }
+        ]
+    }
+} 
